@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/Button';
 import { exportPdf } from '@/lib/pdf/exportPdf';
 import { calculateNUpLayout } from '@/lib/pdf/imposition/nup';
 import { calculateBookletLayout } from '@/lib/pdf/imposition/booklet';
+import { calculatePerfectBoundLayout } from '@/lib/pdf/imposition/perfect-bound';
 import { calculateCardsLayout } from '@/lib/pdf/imposition/cards';
 import { calculateCutStackLayout } from '@/lib/pdf/imposition/cutstack';
 import type { ImpositionLayout } from '@/types/imposition';
@@ -19,7 +20,7 @@ function getLayout(store: ReturnType<typeof useDocumentStore.getState>): Imposit
     case 'cutstack':
       return calculateCutStackLayout(pageCount, originalPageWidth, originalPageHeight, nup.pagesPerSheet, nup, sheet);
     case 'perfect-bound':
-      return calculateBookletLayout(pageCount, originalPageWidth, originalPageHeight, { signatureSize: perfectBound.signatureSize, autoCreep: false, manualCreep: 0, spineGutter: 0 }, sheet, { autoCreep: false });
+      return calculatePerfectBoundLayout(pageCount, originalPageWidth, originalPageHeight, perfectBound, sheet);
     default:
       return { sheets: [], totalSheets: 0, sheetWidth: originalPageWidth, sheetHeight: originalPageHeight };
   }

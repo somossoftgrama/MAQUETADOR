@@ -3,6 +3,7 @@ import { useDocumentStore } from '@/store/documentStore';
 import { previewEngine } from '@/lib/pdf/previewEngine';
 import { calculateNUpLayout } from '@/lib/pdf/imposition/nup';
 import { calculateBookletLayout } from '@/lib/pdf/imposition/booklet';
+import { calculatePerfectBoundLayout } from '@/lib/pdf/imposition/perfect-bound';
 import { calculateCardsLayout } from '@/lib/pdf/imposition/cards';
 import { calculateCutStackLayout } from '@/lib/pdf/imposition/cutstack';
 import { calculateMarks } from '@/lib/pdf/marks';
@@ -25,12 +26,7 @@ function getLayout(
     case 'cutstack':
       return calculateCutStackLayout(pageCount, pageW, pageH, store.nup.pagesPerSheet, store.nup, store.sheet);
     case 'perfect-bound':
-      return calculateBookletLayout(pageCount, pageW, pageH, {
-        signatureSize: store.perfectBound.signatureSize,
-        autoCreep: false,
-        manualCreep: 0,
-        spineGutter: 0,
-      }, store.sheet, { autoCreep: false });
+      return calculatePerfectBoundLayout(pageCount, pageW, pageH, store.perfectBound, store.sheet);
     default:
       return { sheets: [], totalSheets: 0, sheetWidth: pageW, sheetHeight: pageH };
   }
@@ -57,10 +53,12 @@ export function PreviewCanvas() {
   const setPreviewScale = useDocumentStore((s) => s.setPreviewScale);
 
   const renderTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isInitialized = useRef(false);
 
   const doRender = useCallback(async () => {
     const canvas = canvasRef.current;
     if (!canvas || !originalPdfBytes || pageCount === 0) return;
+    if (!isInitialized.current) return;
 
     const store = useDocumentStore.getState();
     const layout = getLayout(impositionType, pageCount, originalPageW, originalPageH, store);
@@ -105,12 +103,15 @@ export function PreviewCanvas() {
   useEffect(() => {
     if (!originalPdfBytes || pageCount === 0) return;
 
+    isInitialized.current = false;
     previewEngine.init(originalPdfBytes).then(() => {
+      isInitialized.current = true;
       doRender();
     });
 
     return () => {
       previewEngine.dispose();
+      isInitialized.current = false;
     };
   }, [originalPdfBytes, pageCount]);
 
