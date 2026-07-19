@@ -1,6 +1,17 @@
 import type { ImpositionLayout, NUpConfig, SheetConfig } from '@/types/imposition';
 import type { NUpCell, ImpositionSheet } from '@/types/imposition';
 
+export function getGripperMargins(sheet: SheetConfig): { top: number; bottom: number; left: number; right: number } {
+  const { gripper, margins } = sheet;
+  if (!gripper.enabled) return { top: margins, bottom: margins, left: margins, right: margins };
+  return {
+    top: margins + (gripper.side === 'top' ? gripper.size : 0),
+    bottom: margins + (gripper.side === 'bottom' ? gripper.size : 0),
+    left: margins + (gripper.side === 'left' ? gripper.size : 0),
+    right: margins + (gripper.side === 'right' ? gripper.size : 0),
+  };
+}
+
 export function calculateNUpLayout(
   pageCount: number,
   pageWidth: number,
@@ -9,7 +20,8 @@ export function calculateNUpLayout(
   sheet: SheetConfig,
 ): ImpositionLayout {
   const { pagesPerSheet, orientation } = nup;
-  const { width: sheetW, height: sheetH, gutter, margins, centerContent } = sheet;
+  const { width: sheetW, height: sheetH, gutter, centerContent } = sheet;
+  const gm = getGripperMargins(sheet);
 
   const cellW = pageWidth;
   const cellH = pageHeight;
@@ -19,8 +31,8 @@ export function calculateNUpLayout(
   const gridW = cols * cellW + gutter * (cols - 1);
   const gridH = rows * cellH + gutter * (rows - 1);
 
-  const offsetX = centerContent ? margins + (sheetW - margins * 2 - gridW) / 2 : margins;
-  const offsetY = centerContent ? margins + (sheetH - margins * 2 - gridH) / 2 : margins;
+  const offsetX = centerContent ? gm.left + (sheetW - gm.left - gm.right - gridW) / 2 : gm.left;
+  const offsetY = centerContent ? gm.top + (sheetH - gm.top - gm.bottom - gridH) / 2 : gm.top;
 
   const sheets: ImpositionSheet[] = [];
   let pageIndex = 0;

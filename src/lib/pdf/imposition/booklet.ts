@@ -1,14 +1,40 @@
 import type { ImpositionLayout, BookletConfig, SheetConfig } from '@/types/imposition';
 import type { NUpCell, ImpositionSheet } from '@/types/imposition';
+import { getGripperMargins } from './nup';
 
-function calcularCreep(pagesInSignature: number): number {
-  if (pagesInSignature <= 8) return 0;
-  return (pagesInSignature - 8) * 0.3;
+const MM_TO_PT = 2.834645669;
+
+const PAPER_CALIPER_MM: Record<number, number> = {
+  70: 0.08, 80: 0.09, 90: 0.10, 100: 0.11, 115: 0.12, 120: 0.13,
+  130: 0.14, 135: 0.15, 150: 0.16, 170: 0.18, 200: 0.20,
+  250: 0.25, 300: 0.30, 350: 0.35,
+};
+
+function getCaliperPt(gsm: number): number {
+  const exact = PAPER_CALIPER_MM[gsm];
+  if (exact) return exact * MM_TO_PT;
+  const entries = Object.entries(PAPER_CALIPER_MM)
+    .map(([k, v]) => [Number(k), v] as const)
+    .sort((a, b) => a[0] - b[0]);
+  for (let i = 1; i < entries.length; i++) {
+    if (gsm < entries[i][0]) {
+      const ratio = (gsm - entries[i - 1][0]) / (entries[i][0] - entries[i - 1][0]);
+      const caliperMm = entries[i - 1][1] + ratio * (entries[i][1] - entries[i - 1][1]);
+      return caliperMm * MM_TO_PT;
+    }
+  }
+  return gsm * 0.001 * MM_TO_PT;
 }
 
-export function calcularCreepAutomatico(pageCount: number): number {
+function calcularCreepPerSheet(paperGsm: number, visualScale: number = 1): number {
+  if (paperGsm <= 0) return 0;
+  return getCaliperPt(paperGsm) * visualScale;
+}
+
+export function calcularCreepAutomatico(pageCount: number, paperGsm: number = 130): number {
   if (pageCount <= 8) return 0;
-  return (pageCount - 8) * 0.3;
+  const numSheets = Math.ceil(pageCount / 4);
+  return (numSheets - 1) * getCaliperPt(paperGsm);
 }
 
 export function calculateBookletLayout(
@@ -17,39 +43,42 @@ export function calculateBookletLayout(
   pageHeight: number,
   booklet: BookletConfig,
   sheet: SheetConfig,
-  options?: { autoCreep?: boolean },
+  options?: { autoCreep?: boolean; creepVisualScale?: number },
 ): ImpositionLayout {
-  const { signatureSize, autoCreep, manualCreep, spineGutter } = booklet;
-  const { width: sheetW, height: sheetH, margins, centerContent } = sheet;
+  const { signatureSize, autoCreep, manualCreep } = booklet;
+  const { width: sheetW, height: sheetH, centerContent } = sheet;
+  const gm = getGripperMargins(sheet);
 
   const cellW = pageWidth;
   const cellH = pageHeight;
 
-  // Dos páginas lado a lado + gutter de lomo en el centro
-  const gridW = cellW * 2 + spineGutter;
-  const offsetX = centerContent
-    ? margins + (sheetW - margins * 2 - gridW) / 2
-    : margins;
+  const spineCenter = centerContent
+    ? gm.left + (sheetW - gm.left - gm.right) / 2
+    : gm.left + cellW;
+
   const offsetY = centerContent
-    ? margins + (sheetH - margins * 2 - cellH) / 2
-    : margins;
+    ? gm.top + (sheetH - gm.top - gm.bottom - cellH) / 2
+    : gm.top;
 
   const sigSize = signatureSize > 0 && signatureSize < pageCount
     ? signatureSize
     : pageCount;
+
+  const visualScale = options?.creepVisualScale ?? 1;
 
   const sheets: ImpositionSheet[] = [];
   let sheetIdx = 0;
 
   for (let sigStart = 0; sigStart < pageCount; sigStart += sigSize) {
     const sigEnd = Math.min(sigStart + sigSize, pageCount);
-    const sigReal = sigEnd - sigStart;
-    const sigPadded = Math.ceil(sigReal / 4) * 4;
+    const sigPadded = Math.ceil((sigEnd - sigStart) / 4) * 4;
     const sigSheets = sigPadded / 4;
 
     const order = buildSignatureOrder(sigPadded, sigStart, pageCount);
 
-    const creep = autoCreep ? calcularCreep(sigReal) : manualCreep;
+    const creep = autoCreep
+      ? calcularCreepPerSheet(booklet.paperGsm, visualScale)
+      : manualCreep * visualScale;
 
     for (let s = 0; s < sigSheets; s++) {
       const pageRight = order[s * 4 + 0];
@@ -59,49 +88,46 @@ export function calculateBookletLayout(
 
       const co = creep * s;
 
-      // Frente: páginas lado a lado. Las del lomo (índice 0 y 1) van rotadas 180° en su eje Y como corresponde en saddle-stitch
-      // En saddle-stitch real: en el frente, la página izquierda va cabeza-arriba y la derecha cabeza-abajo (rot 180).
-      // En el dorso, al revés.
-      // Para simplicidad visual, usamos rotación de 180° sobre Y para las páginas que van "cabeza abajo".
-      
-      // Simplificamos: en saddle-stitch, las páginas de la derecha en el frente y las de la izquierda en el dorso
-      // se rotan 180° porque al doblar el pliego quedan al derecho.
+      const frontLeftX = spineCenter - cellW - co;
+      const frontRightX = spineCenter + co;
+      const backLeftX = spineCenter - cellW - co;
+      const backRightX = spineCenter + co;
 
       const frontCells: NUpCell[] = [
         {
           pageIndex: pageLeftFront,
-          x: offsetX + co,
+          x: frontLeftX,
           y: offsetY,
           width: cellW,
           height: cellH,
-          rotation: 0, // izquierda frente: normal
+          rotation: 0,
         },
         {
           pageIndex: pageRightFront,
-          x: offsetX + cellW + spineGutter - co,
+          x: frontRightX,
           y: offsetY,
           width: cellW,
           height: cellH,
-          rotation: 180, // derecha frente: rotada 180°
+          rotation: 180,
         },
       ];
 
       const backCells: NUpCell[] = [
         {
           pageIndex: pageLeftBack,
-          x: offsetX - co,
+          x: backLeftX,
           y: offsetY,
           width: cellW,
           height: cellH,
-          rotation: 180, // izquierda dorso: rotada 180°
+          rotation: 180,
         },
         {
           pageIndex: pageRight,
-          x: offsetX + cellW + spineGutter + co,
+          x: backRightX,
           y: offsetY,
           width: cellW,
           height: cellH,
-          rotation: 0, // derecha dorso: normal
+          rotation: 0,
         },
       ];
 
@@ -123,10 +149,10 @@ export function buildSignatureOrder(
   let right = paddedSize - 1;
 
   while (left < right) {
-    order.push(baseIndex + right);      // última
-    order.push(baseIndex + left);       // primera
-    order.push(baseIndex + left + 1);   // segunda
-    order.push(baseIndex + right - 1);  // penúltima
+    order.push(baseIndex + right);
+    order.push(baseIndex + left);
+    order.push(baseIndex + left + 1);
+    order.push(baseIndex + right - 1);
     left += 2;
     right -= 2;
   }
@@ -139,8 +165,7 @@ export function getBookletPagePreview(pageCount: number, signatureSize: number =
   const preview: string[] = [];
   for (let sigStart = 0; sigStart < pageCount; sigStart += sigSize) {
     const sigEnd = Math.min(sigStart + sigSize, pageCount);
-    const sigReal = sigEnd - sigStart;
-    const sigPadded = Math.ceil(sigReal / 4) * 4;
+    const sigPadded = Math.ceil((sigEnd - sigStart) / 4) * 4;
     const sigSheets = sigPadded / 4;
     const order = buildSignatureOrder(sigPadded, sigStart, pageCount);
     for (let s = 0; s < sigSheets; s++) {

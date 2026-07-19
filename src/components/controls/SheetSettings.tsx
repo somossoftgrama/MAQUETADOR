@@ -3,7 +3,7 @@ import { Select } from '@/components/ui/Select';
 import { NumberInput } from '@/components/ui/NumberInput';
 import { Toggle } from '@/components/ui/Toggle';
 import { SHEET_PRESETS } from '@/types/imposition';
-import type { SheetPreset, Unit, Orientation } from '@/types/imposition';
+import type { SheetPreset, Unit, Orientation, BleedMode } from '@/types/imposition';
 import { pointsToUnit, unitToPoints } from '@/types/imposition';
 
 const PRESET_OPTIONS: { value: SheetPreset; label: string }[] = [
@@ -29,6 +29,7 @@ export function SheetSettings() {
   const setSheetConfig = useDocumentStore((s) => s.setSheetConfig);
   const setSheetOrientation = useDocumentStore((s) => s.setSheetOrientation);
   const setUnit = useDocumentStore((s) => s.setUnit);
+  const setGripperConfig = useDocumentStore((s) => s.setGripperConfig);
 
   const handleOrientationChange = (orientation: Orientation) => {
     if (orientation !== sheet.orientation) {
@@ -98,6 +99,37 @@ export function SheetSettings() {
         unit="pt"
       />
 
+      <Toggle
+        label="Margen de pinza"
+        checked={sheet.gripper.enabled}
+        onChange={(v) => setGripperConfig({ enabled: v })}
+      />
+
+      {sheet.gripper.enabled && (
+        <>
+          <NumberInput
+            label="Tamaño de pinza"
+            value={sheet.gripper.size}
+            onChange={(v) => setGripperConfig({ size: v })}
+            min={0}
+            max={100}
+            step={0.5}
+            unit="pt"
+          />
+          <Select
+            label="Lado de la pinza"
+            value={sheet.gripper.side}
+            onChange={(v) => setGripperConfig({ side: v as 'top' | 'bottom' | 'left' | 'right' })}
+            options={[
+              { value: 'bottom', label: 'Abajo (entrada de hoja)' },
+              { value: 'top', label: 'Arriba' },
+              { value: 'left', label: 'Izquierda' },
+              { value: 'right', label: 'Derecha' },
+            ]}
+          />
+        </>
+      )}
+
       <NumberInput
         label="Separación (gutter)"
         value={sheet.gutter}
@@ -106,6 +138,29 @@ export function SheetSettings() {
         max={100}
         unit="pt"
       />
+
+      <Select
+        label="Si el PDF no tiene sangrado"
+        value={sheet.bleedMode}
+        onChange={(v) => setSheetConfig({ bleedMode: v as BleedMode })}
+        options={[
+          { value: 'none', label: 'No hacer nada (puede fallar)' },
+          { value: 'scale', label: 'Escalar para llenar el bleed' },
+          { value: 'crop', label: 'Recortar al borde de página' },
+          { value: 'extend', label: 'Extender con color de fondo' },
+        ]}
+      />
+      {sheet.bleedMode === 'extend' && (
+        <div className="flex items-center gap-2">
+          <input
+            type="color"
+            value={sheet.extendColor}
+            onChange={(e) => setSheetConfig({ extendColor: e.target.value })}
+            className="w-8 h-8 rounded border border-gray-300 cursor-pointer"
+          />
+          <span className="text-xs text-gray-500">Color de extensión del bleed</span>
+        </div>
+      )}
     </div>
   );
 }

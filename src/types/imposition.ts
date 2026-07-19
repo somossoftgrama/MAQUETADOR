@@ -1,4 +1,4 @@
-export type ImpositionType = 'nup' | 'booklet' | 'perfect-bound' | 'cards' | 'cutstack';
+export type ImpositionType = 'nup' | 'booklet' | 'perfect-bound' | 'cards' | 'cutstack' | 'work-turn' | 'work-tumble';
 
 export type Unit = 'mm' | 'cm' | 'in';
 
@@ -46,7 +46,7 @@ export interface BookletConfig {
   signatureSize: number;
   autoCreep: boolean;
   manualCreep: number;
-  spineGutter: number;
+  paperGsm: number;
 }
 
 export interface PerfectBoundConfig {
@@ -62,6 +62,8 @@ export interface CardsConfig {
   sourcePage: number;
 }
 
+export type BindingStyle = 'none' | 'wire-o' | 'spiral' | 'binder';
+
 export interface ProductionMarks {
   cropMarks: boolean;
   cropMarkLength: number;
@@ -71,7 +73,21 @@ export interface ProductionMarks {
   bleed: number;
   colorBar: boolean;
   colorBarType: 'CMYK' | 'grayscale';
+  pdfxOutput: boolean;
+  pdfxProfile: 'FOGRA39' | 'GRACoL2006' | 'SWOPv2' | 'ISOcoatedv2';
+  foldMarks: boolean;
+  bindingStyle: BindingStyle;
+  signatureNumbering: boolean;
+  overprintPreview: boolean;
 }
+
+export interface GripperConfig {
+  enabled: boolean;
+  size: number;
+  side: 'top' | 'bottom' | 'left' | 'right';
+}
+
+export type BleedMode = 'none' | 'scale' | 'crop' | 'extend';
 
 export interface SheetConfig {
   preset: SheetPreset;
@@ -81,6 +97,9 @@ export interface SheetConfig {
   margins: number;
   gutter: number;
   centerContent: boolean;
+  gripper: GripperConfig;
+  bleedMode: BleedMode;
+  extendColor: string;
 }
 
 export interface NUpCell {
@@ -104,10 +123,20 @@ export interface ImpositionLayout {
   sheetHeight: number;
 }
 
+export interface CmykColor {
+  c: number;
+  m: number;
+  y: number;
+  k: number;
+}
+
 export interface MarksOverlay {
   cropLineThickness: number;
   cropLines: Array<{ x1: number; y1: number; x2: number; y2: number }>;
   registrationCenters: Array<{ cx: number; cy: number }>;
   bleedBoxes: Array<{ x: number; y: number; w: number; h: number }>;
-  colorBarPatches: Array<{ x: number; y: number; w: number; h: number; color: string }>;
+  colorBarPatches: Array<{ x: number; y: number; w: number; h: number; color: string; cmyk: CmykColor }>;
+  foldLines: Array<{ x1: number; y1: number; x2: number; y2: number; dashed: boolean }>;
+  bindingMarks: Array<{ cx: number; cy: number; radius: number }>;
+  signatureLabels: Array<{ x: number; y: number; text: string }>;
 }

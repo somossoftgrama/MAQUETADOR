@@ -147,6 +147,34 @@ class PreviewEngine {
       );
     }
 
+    for (const fold of marks.foldLines) {
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 0.5;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(fold.x1 * scale, fold.y1 * scale);
+      ctx.lineTo(fold.x2 * scale, fold.y2 * scale);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    for (const bm of marks.bindingMarks) {
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 0.5;
+      const cx = bm.cx * scale;
+      const cy = bm.cy * scale;
+      const r = bm.radius * scale;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    for (const label of marks.signatureLabels) {
+      ctx.fillStyle = '#000';
+      ctx.font = `${7 * scale}px Inter, sans-serif`;
+      ctx.fillText(label.text, label.x * scale - 25 * scale, label.y * scale + 7 * scale);
+    }
+
     ctx.restore();
   }
 

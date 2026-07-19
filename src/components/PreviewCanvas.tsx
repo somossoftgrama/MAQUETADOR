@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { useDocumentStore } from '@/store/documentStore';
 import { previewEngine } from '@/lib/pdf/previewEngine';
 import { calculateNUpLayout } from '@/lib/pdf/imposition/nup';
@@ -6,6 +6,7 @@ import { calculateBookletLayout } from '@/lib/pdf/imposition/booklet';
 import { calculatePerfectBoundLayout } from '@/lib/pdf/imposition/perfect-bound';
 import { calculateCardsLayout } from '@/lib/pdf/imposition/cards';
 import { calculateCutStackLayout } from '@/lib/pdf/imposition/cutstack';
+import { calculateWorkTurnLayout } from '@/lib/pdf/imposition/work-turn';
 import { calculateMarks } from '@/lib/pdf/marks';
 import type { ImpositionLayout, ImpositionType } from '@/types/imposition';
 
@@ -20,13 +21,17 @@ function getLayout(
     case 'nup':
       return calculateNUpLayout(pageCount, pageW, pageH, store.nup, store.sheet);
     case 'booklet':
-      return calculateBookletLayout(pageCount, pageW, pageH, store.booklet, store.sheet);
+      return calculateBookletLayout(pageCount, pageW, pageH, store.booklet, store.sheet, { creepVisualScale: 50 });
     case 'cards':
       return calculateCardsLayout(pageCount, store.cards, store.sheet, store.cards.sourcePage);
     case 'cutstack':
       return calculateCutStackLayout(pageCount, pageW, pageH, store.nup.pagesPerSheet, store.nup, store.sheet);
     case 'perfect-bound':
       return calculatePerfectBoundLayout(pageCount, pageW, pageH, store.perfectBound, store.sheet);
+    case 'work-turn':
+      return calculateWorkTurnLayout(pageCount, pageW, pageH, store.nup, store.sheet, 'work-turn');
+    case 'work-tumble':
+      return calculateWorkTurnLayout(pageCount, pageW, pageH, store.nup, store.sheet, 'work-tumble');
     default:
       return { sheets: [], totalSheets: 0, sheetWidth: pageW, sheetHeight: pageH };
   }
@@ -34,7 +39,9 @@ function getLayout(
 
 export function PreviewCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const canvasBackRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [duplexMode, setDuplexMode] = useState(false);
 
   const pageCount = useDocumentStore((s) => s.pageCount);
   const originalPdfBytes = useDocumentStore((s) => s.originalPdfBytes);
@@ -69,7 +76,7 @@ export function PreviewCanvas() {
     const sheetData = layout.sheets[idx];
     const sW = layout.sheetWidth;
     const sH = layout.sheetHeight;
-    const marksOverlay = calculateMarks(sW, sH, marks.bleed, sheet.margins, marks, sheetData.cells);
+    const marksOverlay = calculateMarks(sW, sH, marks.bleed, sheet.margins, marks, sheetData.cells, idx, layout.sheets.length, impositionType);
 
     await previewEngine.renderSheet(
       canvas,
@@ -79,6 +86,19 @@ export function PreviewCanvas() {
       sH,
       previewScale,
     );
+
+    if (duplexMode && canvasBackRef.current && idx + 1 < layout.sheets.length) {
+      const backSheet = layout.sheets[idx + 1];
+      const backMarks = calculateMarks(sW, sH, marks.bleed, sheet.margins, marks, backSheet.cells, idx + 1, layout.sheets.length, impositionType);
+      await previewEngine.renderSheet(
+        canvasBackRef.current,
+        backSheet,
+        backMarks,
+        sW,
+        sH,
+        previewScale,
+      );
+    }
 
     if (idx !== currentSheetIndex && idx < layout.sheets.length) {
       setCurrentSheetIndex(idx);
@@ -98,6 +118,7 @@ export function PreviewCanvas() {
     previewScale,
     currentSheetIndex,
     setCurrentSheetIndex,
+    duplexMode,
   ]);
 
   useEffect(() => {
@@ -132,13 +153,16 @@ export function PreviewCanvas() {
   const fitToWidth = useCallback(() => {
     if (!containerRef.current) return;
     const w = containerRef.current.clientWidth - 48;
-    const scaleW = w / layout.sheetWidth;
+    const multiplier = duplexMode ? 2.1 : 1;
+    const scaleW = w / (layout.sheetWidth * multiplier);
     setPreviewScale(Math.round(scaleW * 100) / 100);
-  }, [layout.sheetWidth, setPreviewScale]);
+  }, [layout.sheetWidth, setPreviewScale, duplexMode]);
 
   const zoomIn = () => setPreviewScale(Math.min(3, previewScale + 0.1));
   const zoomOut = () => setPreviewScale(Math.max(0.1, previewScale - 0.1));
   const zoom100 = () => setPreviewScale(1);
+
+  const canDuplex = ['booklet', 'perfect-bound', 'work-turn', 'work-tumble'].includes(impositionType);
 
   if (!originalPdfBytes || pageCount === 0) {
     return (
@@ -169,7 +193,7 @@ export function PreviewCanvas() {
       <div className="flex items-center justify-between px-4 py-2 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800">
         <div className="flex items-center gap-1">
           <button
-            onClick={() => setCurrentSheetIndex(Math.max(0, currentSheetIndex - 1))}
+            onClick={() => setCurrentSheetIndex(Math.max(0, currentSheetIndex - (duplexMode ? 2 : 1)))}
             disabled={currentSheetIndex === 0}
             className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30"
           >
@@ -178,10 +202,12 @@ export function PreviewCanvas() {
             </svg>
           </button>
           <span className="text-sm font-medium tabular-nums min-w-[80px] text-center">
-            Hoja {currentSheetIndex + 1} / {totalSheets || 1}
+            {duplexMode
+              ? `Pliego ${Math.floor(currentSheetIndex / 2) + 1}`
+              : `Hoja ${currentSheetIndex + 1} / ${totalSheets || 1}`}
           </span>
           <button
-            onClick={() => setCurrentSheetIndex(Math.min(totalSheets - 1, currentSheetIndex + 1))}
+            onClick={() => setCurrentSheetIndex(Math.min(totalSheets - 1, currentSheetIndex + (duplexMode ? 2 : 1)))}
             disabled={currentSheetIndex >= totalSheets - 1}
             className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30"
           >
@@ -192,6 +218,19 @@ export function PreviewCanvas() {
         </div>
 
         <div className="flex items-center gap-1">
+          {canDuplex && (
+            <button
+              onClick={() => setDuplexMode(!duplexMode)}
+              className={`px-2 py-1 text-xs rounded transition-colors ${
+                duplexMode
+                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                  : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+              }`}
+              title="Ver frente y dorso"
+            >
+              F+D
+            </button>
+          )}
           <button onClick={zoomOut} className="px-2 py-1 text-xs rounded hover:bg-gray-100 dark:hover:bg-gray-800">
             −
           </button>
@@ -208,11 +247,27 @@ export function PreviewCanvas() {
       </div>
 
       <div ref={containerRef} className="flex-1 overflow-auto flex items-start justify-center p-6">
-        <canvas
-          ref={canvasRef}
-          className="shadow-lg bg-white"
-          style={{ maxWidth: '100%' }}
-        />
+        <div className={`flex ${duplexMode ? 'gap-6' : ''}`}>
+          <canvas
+            ref={canvasRef}
+            className="shadow-lg bg-white"
+            style={{ maxWidth: duplexMode ? '48%' : '100%' }}
+          />
+          {duplexMode && (
+            <>
+              <div className="flex items-center text-xs text-gray-400 font-medium px-1">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                </svg>
+              </div>
+              <canvas
+                ref={canvasBackRef}
+                className="shadow-lg bg-white"
+                style={{ maxWidth: '48%' }}
+              />
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

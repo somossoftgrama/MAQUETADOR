@@ -51,6 +51,16 @@ export function MarksControls() {
         onChange={(v) => setMarksConfig({ registrationMarks: v })}
       />
       <Toggle
+        label="Marcas de pliegue"
+        checked={marks.foldMarks}
+        onChange={(v) => setMarksConfig({ foldMarks: v })}
+      />
+      {marks.foldMarks && (
+        <p className="text-xs text-gray-400">
+          Líneas punteadas entre celdas indicando dónde doblar el pliego.
+        </p>
+      )}
+      <Toggle
         label="Barra de color"
         checked={marks.colorBar}
         onChange={(v) => setMarksConfig({ colorBar: v })}
@@ -75,6 +85,64 @@ export function MarksControls() {
         step={0.5}
         unit="pt"
       />
+
+      <Select
+        label="Perforación / encuadernado"
+        value={marks.bindingStyle}
+        onChange={(v) => setMarksConfig({ bindingStyle: v as 'none' | 'wire-o' | 'spiral' | 'binder' })}
+        options={[
+          { value: 'none', label: 'Ninguno' },
+          { value: 'wire-o', label: 'Wire-O' },
+          { value: 'spiral', label: 'Espiral' },
+          { value: 'binder', label: 'Carpeta (3 anillos)' },
+        ]}
+      />
+
+      <Toggle
+        label="Numeración de pliegos"
+        checked={marks.signatureNumbering}
+        onChange={(v) => setMarksConfig({ signatureNumbering: v })}
+      />
+      {marks.signatureNumbering && (
+        <p className="text-xs text-gray-400">
+          Imprime el número de pliego en cada plancha como referencia de encuadernación.
+        </p>
+      )}
+
+      <Toggle
+        label="Exportar como PDF/X-4"
+        checked={marks.pdfxOutput}
+        onChange={(v) => setMarksConfig({ pdfxOutput: v })}
+      />
+      {marks.pdfxOutput && (
+        <>
+          <Select
+            label="Perfil de color ICC"
+            value={marks.pdfxProfile}
+            onChange={(v) => setMarksConfig({ pdfxProfile: v as 'FOGRA39' | 'GRACoL2006' | 'SWOPv2' | 'ISOcoatedv2' })}
+            options={[
+              { value: 'FOGRA39', label: 'FOGRA39 (offset estándar)' },
+              { value: 'GRACoL2006', label: 'GRACoL 2006 (Norteamérica)' },
+              { value: 'SWOPv2', label: 'SWOP v2 (impresión web)' },
+              { value: 'ISOcoatedv2', label: 'ISO Coated v2 (Europa)' },
+            ]}
+          />
+          <p className="text-xs text-gray-400">
+            Agrega TrimBox, BleedBox, MediaBox y metadata de compliance PDF/X-4.
+          </p>
+        </>
+      )}
+
+      <Toggle
+        label="Overprint preview"
+        checked={marks.overprintPreview}
+        onChange={(v) => setMarksConfig({ overprintPreview: v })}
+      />
+      {marks.overprintPreview && (
+        <p className="text-xs text-amber-600 dark:text-amber-400">
+          Simulación visual de sobreimpresión. Las zonas con tinta se muestran semitransparentes.
+        </p>
+      )}
     </div>
   );
 }

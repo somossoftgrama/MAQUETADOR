@@ -2,13 +2,31 @@ import { useDocumentStore } from '@/store/documentStore';
 import { calcularCreepAutomatico } from '@/lib/pdf/imposition/booklet';
 import { NumberInput } from '@/components/ui/NumberInput';
 import { Toggle } from '@/components/ui/Toggle';
+import { Select } from '@/components/ui/Select';
+
+const GSM_OPTIONS = [
+  { value: '70', label: '70 gsm (biblia)' },
+  { value: '80', label: '80 gsm (obra estándar)' },
+  { value: '90', label: '90 gsm (obra)' },
+  { value: '100', label: '100 gsm' },
+  { value: '115', label: '115 gsm (semi-couché)' },
+  { value: '120', label: '120 gsm' },
+  { value: '130', label: '130 gsm (couché mate)' },
+  { value: '135', label: '135 gsm' },
+  { value: '150', label: '150 gsm (couché brillo)' },
+  { value: '170', label: '170 gsm' },
+  { value: '200', label: '200 gsm' },
+  { value: '250', label: '250 gsm (cartulina)' },
+  { value: '300', label: '300 gsm' },
+  { value: '350', label: '350 gsm' },
+];
 
 export function BookletControls() {
   const pageCount = useDocumentStore((s) => s.pageCount);
   const booklet = useDocumentStore((s) => s.booklet);
   const setBookletConfig = useDocumentStore((s) => s.setBookletConfig);
 
-  const creepAuto = calcularCreepAutomatico(pageCount);
+  const creepAuto = calcularCreepAutomatico(pageCount, booklet.paperGsm);
   const totalPliegos = Math.ceil(Math.ceil(pageCount / 4) * 4 / 4);
   const sigSize = booklet.signatureSize > 0 && booklet.signatureSize < pageCount
     ? booklet.signatureSize
@@ -32,18 +50,17 @@ export function BookletControls() {
         Total: {totalPliegos} {totalPliegos === 1 ? 'pliego' : 'pliegos'}.
       </p>
 
-      <NumberInput
-        label="Separación de lomo (gutter)"
-        value={booklet.spineGutter}
-        onChange={(v) => setBookletConfig({ spineGutter: v })}
-        min={0}
-        max={100}
-        step={1}
-        unit="pt"
-      />
-      <p className="text-xs text-gray-400 -mt-2">
-        Espacio entre las dos páginas del pliego (lomo).
-      </p>
+      <div className="space-y-2">
+        <Select
+          label="Gramaje del papel"
+          value={String(booklet.paperGsm)}
+          onChange={(v) => setBookletConfig({ paperGsm: Number(v) })}
+          options={GSM_OPTIONS}
+        />
+        <p className="text-xs text-gray-400">
+          Define el calibre del papel para el cálculo de creep.
+        </p>
+      </div>
 
       <div className="space-y-2">
         <Toggle
@@ -59,11 +76,11 @@ export function BookletControls() {
                 Valor calculado
               </span>
               <span className="text-sm font-bold tabular-nums text-blue-700 dark:text-blue-400">
-                {creepAuto.toFixed(1)} pt
+                {creepAuto.toFixed(2)} pt
               </span>
             </div>
             <p className="text-xs text-blue-600/70 dark:text-blue-400/60 mt-1">
-              Basado en {pageCount} páginas. Las interiores se desplazan para compensar el papel.
+              Basado en {pageCount} págs y {booklet.paperGsm} gsm. Las interiores se desplazan para compensar el papel.
             </p>
           </div>
         ) : (
@@ -81,16 +98,14 @@ export function BookletControls() {
 
       <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 p-3">
         <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">
-          Rotación de páginas (saddle-stitch)
+          Marcas en saddle-stitch
         </h4>
         <div className="text-[10px] text-gray-400 leading-relaxed space-y-0.5">
-          <p>· Frente izquierda: 0° (normal)</p>
-          <p>· Frente derecha: 180° (invertida)</p>
-          <p>· Dorso izquierda: 180° (invertida)</p>
-          <p>· Dorso derecha: 0° (normal)</p>
-          <p className="mt-1 text-gray-500">
-            La rotación se aplica automáticamente para que al doblar el pliego las páginas queden orientadas correctamente.
-          </p>
+          <p>· Crop marks: bordes exteriores de cada página</p>
+          <p>· Línea central: línea de doblez (punteada)</p>
+          <p>· La línea de doblez se ajusta con el creep</p>
+          <p>· Frente izquierda: 0° · Frente derecha: 180°</p>
+          <p>· Dorso izquierda: 180° · Dorso derecha: 0°</p>
         </div>
       </div>
     </div>

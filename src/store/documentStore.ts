@@ -13,14 +13,16 @@ import type {
   ProductionMarks,
   SheetConfig,
   SheetPreset,
+  GripperConfig,
+  BleedMode,
 } from '@/types/imposition';
 
 const DEFAULT_NUP: NUpConfig = { pagesPerSheet: 4, orientation: 'portrait' };
-const DEFAULT_BOOKLET: BookletConfig = { signatureSize: 0, autoCreep: true, manualCreep: 0, spineGutter: 18 };
+const DEFAULT_BOOKLET: BookletConfig = { signatureSize: 0, autoCreep: true, manualCreep: 0, paperGsm: 130 };
 const DEFAULT_PERFECT_BOUND: PerfectBoundConfig = { signatureSize: 8 };
 const DEFAULT_CARDS: CardsConfig = { cardWidth: 252, cardHeight: 144, cols: 2, rows: 5, gutter: 10, sourcePage: 0 };
-const DEFAULT_MARKS: ProductionMarks = { cropMarks: true, cropMarkLength: 20, cropMarkOffset: 6, cropMarkThickness: 0.25, registrationMarks: false, bleed: 8.5, colorBar: false, colorBarType: 'CMYK' };
-const DEFAULT_SHEET: SheetConfig = { preset: 'A3', width: 841.89, height: 1190.55, orientation: 'portrait', margins: 36, gutter: 14, centerContent: true };
+const DEFAULT_MARKS: ProductionMarks = { cropMarks: true, cropMarkLength: 20, cropMarkOffset: 6, cropMarkThickness: 0.25, registrationMarks: false, bleed: 8.5, colorBar: false, colorBarType: 'CMYK', pdfxOutput: false, pdfxProfile: 'FOGRA39', foldMarks: false, bindingStyle: 'none', signatureNumbering: false, overprintPreview: false };
+const DEFAULT_SHEET: SheetConfig = { preset: 'A3', width: 841.89, height: 1190.55, orientation: 'portrait', margins: 36, gutter: 14, centerContent: true, gripper: { enabled: false, size: 34, side: 'bottom' }, bleedMode: 'none', extendColor: '#ffffff' };
 
 interface DocumentState {
   originalFile: File | null;
@@ -56,6 +58,7 @@ interface DocumentState {
   setSheetConfig: (config: Partial<SheetConfig>) => void;
   setSheetPreset: (preset: SheetPreset) => void;
   setSheetOrientation: (orientation: Orientation) => void;
+  setGripperConfig: (config: Partial<GripperConfig>) => void;
   setMarksConfig: (config: Partial<ProductionMarks>) => void;
   setUnit: (unit: Unit) => void;
   setPreviewScale: (scale: number) => void;
@@ -187,6 +190,12 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         width: s.sheet.height,
         height: s.sheet.width,
       },
+      currentSheetIndex: 0,
+    })),
+
+  setGripperConfig: (config) =>
+    set((s) => ({
+      sheet: { ...s.sheet, gripper: { ...s.sheet.gripper, ...config } },
       currentSheetIndex: 0,
     })),
 

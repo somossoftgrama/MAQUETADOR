@@ -1,5 +1,5 @@
-import { PDFDocument, rgb } from 'pdf-lib';
-import type { ProductionMarks, ImpositionLayout, ImpositionSheet } from '@/types/imposition';
+import { PDFDocument, rgb, cmyk } from 'pdf-lib';
+import type { ProductionMarks, ImpositionLayout, ImpositionSheet, ImpositionType } from '@/types/imposition';
 import { calculateMarks } from './marks';
 
 export async function exportPdf(
@@ -9,13 +9,35 @@ export async function exportPdf(
   sheetH: number,
   marksConfig: ProductionMarks,
   margins: number,
+  fileName?: string,
+  impositionType?: ImpositionType,
 ): Promise<Uint8Array> {
   const srcDoc = await PDFDocument.load(originalPdfBytes, { ignoreEncryption: false });
   const outDoc = await PDFDocument.create();
 
-  for (const sheet of layout.sheets) {
+  if (marksConfig.pdfxOutput) {
+    outDoc.setTitle(fileName || 'Documento impuesto');
+    outDoc.setCreator('MAQUETADOR');
+    outDoc.setProducer('MAQUETADOR - PDF/X-4');
+  }
+
+  for (let i = 0; i < layout.sheets.length; i++) {
+    const sheet = layout.sheets[i];
     const page = outDoc.addPage([sheetW, sheetH]);
     const sheetHPoints = sheetH;
+
+    if (marksConfig.pdfxOutput) {
+      const bleedBox = { left: 0, bottom: 0, right: sheetW, top: sheetH };
+      page.setBleedBox(bleedBox.left, bleedBox.bottom, bleedBox.right, bleedBox.top);
+
+      const trimBox = {
+        left: margins,
+        bottom: margins,
+        right: sheetW - margins,
+        top: sheetH - margins,
+      };
+      page.setTrimBox(trimBox.left, trimBox.bottom, trimBox.right, trimBox.top);
+    }
 
     for (const cell of sheet.cells) {
       if (cell.pageIndex < 0 || cell.pageIndex >= srcDoc.getPageCount()) continue;
@@ -41,7 +63,7 @@ export async function exportPdf(
       });
     }
 
-    drawProductionMarks(page, sheet, sheetW, sheetHPoints, marksConfig, margins);
+    drawProductionMarks(page, sheet, sheetW, sheetHPoints, marksConfig, margins, i, layout.sheets.length, impositionType);
   }
 
   return outDoc.save();
@@ -54,15 +76,19 @@ function drawProductionMarks(
   sheetH: number,
   marksConfig: ProductionMarks,
   margins: number,
+  sheetIndex?: number,
+  totalSheets?: number,
+  impositionType?: ImpositionType,
 ) {
-  const overlay = calculateMarks(sheetW, sheetH, marksConfig.bleed, margins, marksConfig, sheet.cells);
+  const overlay = calculateMarks(sheetW, sheetH, marksConfig.bleed, margins, marksConfig, sheet.cells, sheetIndex, totalSheets, impositionType);
+  const regBlack = cmyk(1, 1, 1, 1);
 
   for (const line of overlay.cropLines) {
     page.drawLine({
       start: { x: line.x1, y: sheetH - line.y1 },
       end: { x: line.x2, y: sheetH - line.y2 },
       thickness: overlay.cropLineThickness,
-      color: rgb(0, 0, 0),
+      color: regBlack,
     });
   }
 
@@ -70,8 +96,8 @@ function drawProductionMarks(
     const cx = reg.cx;
     const cy = sheetH - reg.cy;
     const size = 8;
-    page.drawLine({ start: { x: cx - size, y: cy }, end: { x: cx + size, y: cy }, thickness: 0.25, color: rgb(0, 0, 0) });
-    page.drawLine({ start: { x: cx, y: cy - size }, end: { x: cx, y: cy + size }, thickness: 0.25, color: rgb(0, 0, 0) });
+    page.drawLine({ start: { x: cx - size, y: cy }, end: { x: cx + size, y: cy }, thickness: 0.25, color: regBlack });
+    page.drawLine({ start: { x: cx, y: cy - size }, end: { x: cx, y: cy + size }, thickness: 0.25, color: regBlack });
   }
 
   for (const bb of overlay.bleedBoxes) {
@@ -86,18 +112,45 @@ function drawProductionMarks(
   }
 
   for (const patch of overlay.colorBarPatches) {
+    const { c, m, y, k } = patch.cmyk;
     page.drawRectangle({
       x: patch.x,
       y: sheetH - patch.y - patch.h,
       width: patch.w,
       height: patch.h,
-      color: rgb(
-        parseInt(patch.color.slice(1, 3), 16) / 255,
-        parseInt(patch.color.slice(3, 5), 16) / 255,
-        parseInt(patch.color.slice(5, 7), 16) / 255,
-      ),
-      borderColor: rgb(0, 0, 0),
+      color: cmyk(c, m, y, k),
+      borderColor: regBlack,
       borderWidth: 0.25,
+    });
+  }
+
+  for (const fold of overlay.foldLines) {
+    const dashArray = [4, 4];
+    page.drawLine({
+      start: { x: fold.x1, y: sheetH - fold.y1 },
+      end: { x: fold.x2, y: sheetH - fold.y2 },
+      thickness: 0.25,
+      color: regBlack,
+      dashArray,
+    });
+  }
+
+  for (const bm of overlay.bindingMarks) {
+    page.drawCircle({
+      x: bm.cx,
+      y: sheetH - bm.cy,
+      size: bm.radius,
+      borderColor: regBlack,
+      borderWidth: 0.25,
+    });
+  }
+
+  for (const label of overlay.signatureLabels) {
+    page.drawText(label.text, {
+      x: label.x - 30,
+      y: sheetH - label.y + 12,
+      size: 7,
+      color: regBlack,
     });
   }
 }

@@ -1,6 +1,7 @@
 import type { ImpositionLayout, PerfectBoundConfig, SheetConfig } from '@/types/imposition';
 import type { NUpCell, ImpositionSheet } from '@/types/imposition';
 import { buildSignatureOrder } from './booklet';
+import { getGripperMargins } from './nup';
 
 export function calculatePerfectBoundLayout(
   pageCount: number,
@@ -10,18 +11,19 @@ export function calculatePerfectBoundLayout(
   sheet: SheetConfig,
 ): ImpositionLayout {
   const { signatureSize } = config;
-  const { width: sheetW, height: sheetH, margins, centerContent } = sheet;
+  const { width: sheetW, height: sheetH, centerContent } = sheet;
+  const gm = getGripperMargins(sheet);
 
   const cellW = pageWidth;
   const cellH = pageHeight;
 
   const gridW = cellW * 2;
   const offsetX = centerContent
-    ? margins + (sheetW - margins * 2 - gridW) / 2
-    : margins;
+    ? gm.left + (sheetW - gm.left - gm.right - gridW) / 2
+    : gm.left;
   const offsetY = centerContent
-    ? margins + (sheetH - margins * 2 - cellH) / 2
-    : margins;
+    ? gm.top + (sheetH - gm.top - gm.bottom - cellH) / 2
+    : gm.top;
 
   const sigSize = signatureSize > 0 && signatureSize < pageCount
     ? signatureSize
@@ -32,8 +34,7 @@ export function calculatePerfectBoundLayout(
 
   for (let sigStart = 0; sigStart < pageCount; sigStart += sigSize) {
     const sigEnd = Math.min(sigStart + sigSize, pageCount);
-    const sigReal = sigEnd - sigStart;
-    const sigPadded = Math.ceil(sigReal / 4) * 4;
+    const sigPadded = Math.ceil((sigEnd - sigStart) / 4) * 4;
     const sigSheets = sigPadded / 4;
 
     const order = buildSignatureOrder(sigPadded, sigStart, pageCount);

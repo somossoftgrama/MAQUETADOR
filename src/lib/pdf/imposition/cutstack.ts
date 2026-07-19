@@ -1,5 +1,5 @@
 import type { ImpositionLayout, NUpConfig, SheetConfig, NUpCell, ImpositionSheet } from '@/types/imposition';
-import { getGridDimensions } from './nup';
+import { getGridDimensions, getGripperMargins } from './nup';
 
 export function calculateCutStackLayout(
   pageCount: number,
@@ -10,7 +10,8 @@ export function calculateCutStackLayout(
   sheet: SheetConfig,
 ): ImpositionLayout {
   const { orientation } = nup;
-  const { width: sheetW, height: sheetH, margins, gutter, centerContent } = sheet;
+  const { width: sheetW, height: sheetH, gutter, centerContent } = sheet;
+  const gm = getGripperMargins(sheet);
 
   const cellW = pageWidth;
   const cellH = pageHeight;
@@ -18,8 +19,8 @@ export function calculateCutStackLayout(
 
   const gridW = cols * cellW + gutter * (cols - 1);
   const gridH = rows * cellH + gutter * (rows - 1);
-  const offsetX = centerContent ? margins + (sheetW - margins * 2 - gridW) / 2 : margins;
-  const offsetY = centerContent ? margins + (sheetH - margins * 2 - gridH) / 2 : margins;
+  const offsetX = centerContent ? gm.left + (sheetW - gm.left - gm.right - gridW) / 2 : gm.left;
+  const offsetY = centerContent ? gm.top + (sheetH - gm.top - gm.bottom - gridH) / 2 : gm.top;
 
   const sheets: ImpositionSheet[] = [];
   for (let pageIdx = 0; pageIdx < pageCount; pageIdx++) {

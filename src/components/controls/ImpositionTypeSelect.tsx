@@ -8,6 +8,8 @@ const TYPE_OPTIONS: { value: ImpositionType; label: string }[] = [
   { value: 'perfect-bound', label: 'Encuadernación pegada' },
   { value: 'cards', label: 'Tarjetas (Step & Repeat)' },
   { value: 'cutstack', label: 'Cut & Stack' },
+  { value: 'work-turn', label: 'Work & Turn' },
+  { value: 'work-tumble', label: 'Work & Tumble' },
 ];
 
 export function ImpositionTypeSelect() {

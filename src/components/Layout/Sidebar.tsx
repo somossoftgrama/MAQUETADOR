@@ -28,6 +28,8 @@ function ControlsForType() {
   switch (type) {
     case 'nup':
     case 'cutstack':
+    case 'work-turn':
+    case 'work-tumble':
       return <NUpControls />;
     case 'booklet':
       return <BookletControls />;

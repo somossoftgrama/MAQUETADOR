@@ -5,7 +5,7 @@
 - Las páginas del PDF deben conservar su tamaño original al cargarse, sin adaptarse al tamaño de la hoja de imposición. Confidence: 0.70
 - El tamaño de la hoja de imposición debe ser fijo (definido por el preset/configuración del usuario), no auto-calculado a partir del tamaño de página. Confidence: 0.70
 - Debe haber una opción para centrar el PDF en la hoja de imposición. Confidence: 0.65
-- Las líneas de corte deben ir al borde/filo del archivo PDF (no de la hoja). Confidence: 0.65
+- Las líneas de corte deben ir al borde/filo del archivo PDF (no de la hoja). En modo booklet, los crop marks van en los bordes exteriores de cada página y la línea del medio (spine) es de pliegue/doblez, no de corte. Confidence: 0.75
 
 # stack
 - Usar React + Vite + TypeScript + Tailwind CSS para el frontend. Confidence: 0.50
