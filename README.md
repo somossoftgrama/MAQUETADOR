@@ -1,8 +1,8 @@
 # MAQUETADOR
 
-**Herramienta profesional de imposición de PDFs para imprenta offset y digital.**
+**Herramienta profesional de imposición de PDFs para imprenta offset y digital. Basada en el modelo conceptual CIP4 JDF 1.8.**
 
-MAQUETADOR toma un PDF fuente y reordena sus páginas en pliegos de impresión listos para producción, aplicando marcas de corte, registro, barras de color CMYK, líneas de pliegue y más. Todo con previsualización en tiempo real y exportación PDF/X-4.
+MAQUETADOR toma un PDF fuente y reordena sus páginas en pliegos de impresión listos para producción, aplicando marcas de corte, registro, barras de color CMYK, marcas de colación, líneas de pliegue y más. Todo con previsualización en tiempo real WYSIWYG y exportación PDF/X-4.
 
 ![Stack](https://img.shields.io/badge/stack-React%2018%20%2B%20Vite%206%20%2B%20TypeScript%205-blue)
 ![PDF](https://img.shields.io/badge/PDF-pdf--lib%20%2B%20pdfjs--dist-red)
@@ -16,6 +16,7 @@ MAQUETADOR toma un PDF fuente y reordena sus páginas en pliegos de impresión l
 
 - [Tipos de imposición](#tipos-de-imposición)
 - [Marcas de producción](#marcas-de-producción)
+- [Control de calidad en encuadernación](#control-de-calidad-en-encuadernación)
 - [Flujo de trabajo profesional](#flujo-de-trabajo-profesional)
 - [Instalación y uso](#instalación-y-uso)
 - [Atajos de teclado](#atajos-de-teclado)
@@ -50,6 +51,7 @@ Similar al booklet pero sin creep de saddle-stitch. Para encuadernación con lom
 - Cuadernillos de 4, 8, 12, 16... páginas
 - Orden de saddle-stitch por cuadernillo
 - Sin línea de doblez central (las hojas se pliegan individualmente)
+- **Marcas de colación:** cuadraditos negros en el lomo que forman una escalera diagonal al apilar los cuadernillos. Permite verificar visualmente que ningún cuadernillo falte o esté fuera de orden.
 
 ### 4. Tarjetas (Step & Repeat)
 Repite una misma página en grilla para imprimir tarjetas de visita, postales, entradas, etc.
@@ -114,8 +116,31 @@ Marcas circulares para estilos de encuadernación predefinidos:
 ### Sangrado (bleed)
 Rectángulos rojos punteados alrededor de cada celda mostrando la zona de sangrado. Configurable de 0 a 50 pt.
 
-### Numeración de pliegos
-Texto "Pliego X / N" en la parte superior de cada plancha como referencia para el encuadernador.
+### Slug de trabajo
+Etiqueta multilínea en la parte superior de cada plancha con metadata completa del trabajo:
+
+- **Línea 1:** nombre de archivo, fecha, pliego X/N
+- **Línea 2:** tipo de imposición, cantidad de páginas, dirección de fibra
+- **Línea 3 (PDF/X-4):** perfil ICC
+
+---
+
+## Control de calidad en encuadernación
+
+### Marcas de colación (collating marks)
+Para encuadernación pegada, MAQUETADOR genera cuadraditos negros de 3×3 pt en el lomo de cada cuadernillo. La posición vertical del cuadrado cambia con cada cuadernillo, formando una **escalera diagonal** cuando los cuadernillos se apilan correctamente.
+
+Si la línea diagonal se rompe, el encuadernador detecta inmediatamente que un cuadernillo falta o está fuera de orden. Este es un estándar de control de calidad en imprentas profesionales (definido en CIP4 JDF como `CollatingMark`).
+
+Se activa desde **Marcas de producción → Marcas de colación** (visible solo en modo Encuadernación pegada).
+
+### Dirección de fibra del papel (grain direction)
+Configurable desde **Hoja → Dirección de fibra**:
+
+- **Fibra larga (FL):** paralela al lomo. Recomendada para libros — evita que el papel se quiebre al plegar.
+- **Fibra corta (FC):** perpendicular al lomo. Para trabajos donde la rigidez lateral es prioritaria.
+
+La dirección de fibra se refleja en el slug de trabajo de cada plancha para referencia del impresor y encuadernador.
 
 ---
 
@@ -127,6 +152,7 @@ Texto "Pliego X / N" en la parte superior de cada plancha como referencia para e
 |--------|-------------|
 | **Tamaño de hoja** | A4, A3, Mega A3 (330×480mm), Carta, Legal, Tabloide, Personalizado |
 | **Orientación** | Vertical / Horizontal |
+| **Dirección de fibra** | Fibra larga (paralela al lomo) o corta (perpendicular) |
 | **Unidad** | Milímetros, centímetros, pulgadas |
 | **Márgenes** | Margen general (0–200 pt) |
 | **Margen de pinza** | Gripper margin configurable por lado (arriba, abajo, izquierda, derecha). Tamaño personalizable (0–100 pt). Se descuenta del área útil. |
@@ -285,11 +311,14 @@ src/
 - [x] Barra de color CMYK real (separaciones nativas en pdf-lib)
 - [x] Margen de pinza (gripper margin) configurable por lado
 - [x] Cálculo de creep por calibre real (tabla de 14 gramajes con interpolación)
+- [x] Marcas de colación (collating marks) para perfect-bound
+- [x] Dirección de fibra del papel (grain direction)
+- [x] Slug de trabajo multilínea (archivo, fecha, imposición, fibra, perfil ICC)
+- [x] WYSIWYG real entre preview canvas y PDF exportado
 - [x] Exportación PDF/X-4 con TrimBox, BleedBox, metadata
 - [x] Perfiles ICC seleccionables (FOGRA39, GRACoL, SWOPv2, ISOcoatedv2)
 - [x] Manejo de PDF sin sangrado (escalar, recortar, extender con color)
 - [x] Perforación / encuadernado predefinido (wire-o, espiral, carpeta)
-- [x] Numeración de pliegos
 - [x] Preview frente + dorso simultáneo
 - [x] Overprint preview
 - [x] UI 100% en español
@@ -297,15 +326,17 @@ src/
 - [x] Drag & drop de PDFs
 - [x] Validación de PDFs encriptados
 - [x] Múltiples unidades (mm, cm, pulgadas)
+- [x] Modelo conceptual alineado a CIP4 JDF 1.8
 
 ### Próximamente
 
-- [ ] Atajo de teclado para zoom con Ctrl+rueda
 - [ ] Persistencia de configuración entre sesiones
 - [ ] Soporte multi-archivo (varios PDFs simultáneos)
 - [ ] Historial de cambios (undo)
 - [ ] Barra de progreso en exportación de PDFs grandes
 - [ ] Worker de pdf.js embebido (modo offline)
+- [ ] Optimización automática de hoja de imposición
+- [ ] Exportación JDF para integración con RIP/MIS
 
 ---
 
