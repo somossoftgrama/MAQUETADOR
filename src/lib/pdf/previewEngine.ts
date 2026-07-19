@@ -169,6 +169,16 @@ class PreviewEngine {
       ctx.stroke();
     }
 
+    for (const cm of marks.collatingMarks) {
+      ctx.fillStyle = '#000';
+      ctx.fillRect(
+        cm.x * scale,
+        cm.y * scale,
+        cm.w * scale,
+        cm.h * scale,
+      );
+    }
+
     for (const label of marks.signatureLabels) {
       ctx.fillStyle = '#000';
       ctx.font = `bold ${Math.max(12, 14 * scale)}px Inter, sans-serif`;

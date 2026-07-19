@@ -4,6 +4,8 @@ export type Unit = 'mm' | 'cm' | 'in';
 
 export type Orientation = 'portrait' | 'landscape';
 
+export type GrainDirection = 'long' | 'short';
+
 export type SheetPreset = 'A4' | 'A3' | 'MegaA3' | 'Letter' | 'Legal' | 'Tabloid' | 'Custom';
 
 export interface SheetSize {
@@ -77,6 +79,7 @@ export interface ProductionMarks {
   pdfxProfile: 'FOGRA39' | 'GRACoL2006' | 'SWOPv2' | 'ISOcoatedv2';
   foldMarks: boolean;
   bindingStyle: BindingStyle;
+  collatingMarks: boolean;
   signatureNumbering: boolean;
   overprintPreview: boolean;
 }
@@ -94,6 +97,7 @@ export interface SheetConfig {
   width: number;
   height: number;
   orientation: Orientation;
+  grainDirection: GrainDirection;
   margins: number;
   gutter: number;
   centerContent: boolean;
@@ -102,6 +106,10 @@ export interface SheetConfig {
   extendColor: string;
 }
 
+/**
+ * CIP4 JDF 1.8: representación de una página impuesta en una posición específica de la hoja.
+ * Equivalente a JDF Component en el modelo Layout.
+ */
 export interface NUpCell {
   pageIndex: number;
   x: number;
@@ -111,11 +119,19 @@ export interface NUpCell {
   rotation: number;
 }
 
+/**
+ * CIP4 JDF 1.8: representa una hoja de imposición (Sheet) con sus componentes (Cells).
+ * Un pliego físico puede tener frente y dorso → dos ImpositionSheets consecutivos en el layout.
+ */
 export interface ImpositionSheet {
   cells: NUpCell[];
   sheetIndex: number;
 }
 
+/**
+ * CIP4 JDF 1.8: resultado completo de un cálculo de imposición (Layout).
+ * Contiene todas las hojas con sus páginas posicionadas, rotaciones, y dimensiones.
+ */
 export interface ImpositionLayout {
   sheets: ImpositionSheet[];
   totalSheets: number;
@@ -138,5 +154,6 @@ export interface MarksOverlay {
   colorBarPatches: Array<{ x: number; y: number; w: number; h: number; color: string; cmyk: CmykColor }>;
   foldLines: Array<{ x1: number; y1: number; x2: number; y2: number; dashed: boolean }>;
   bindingMarks: Array<{ cx: number; cy: number; radius: number }>;
+  collatingMarks: Array<{ x: number; y: number; w: number; h: number }>;
   signatureLabels: Array<{ x: number; y: number; text: string }>;
 }

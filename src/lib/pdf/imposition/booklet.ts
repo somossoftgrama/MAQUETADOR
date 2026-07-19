@@ -139,6 +139,14 @@ export function calculateBookletLayout(
   return { sheets, totalSheets: sheets.length, sheetWidth: sheetW, sheetHeight: sheetH };
 }
 
+/**
+ * Genera el orden de páginas saddle-stitch (JDF BinderySignature / Gathering).
+ * Algoritmo: toma pares desde los extremos hacia el centro: [last, first, first+1, last-1, ...]
+ * Cada bloque de 4 páginas forma un pliego físico (frente y dorso).
+ * Las páginas fuera de rango (más allá de totalPageCount) se marcan como -1 (blanco).
+ *
+ * Ejemplo para 8 páginas: [7, 0, 1, 6, 5, 2, 3, 4]
+ */
 export function buildSignatureOrder(
   paddedSize: number,
   baseIndex: number,

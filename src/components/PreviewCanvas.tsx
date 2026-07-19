@@ -76,7 +76,25 @@ export function PreviewCanvas() {
     const sheetData = layout.sheets[idx];
     const sW = layout.sheetWidth;
     const sH = layout.sheetHeight;
-    const marksOverlay = calculateMarks(sW, sH, marks.bleed, sheet.margins, marks, sheetData.cells, idx, layout.sheets.length, impositionType);
+    const sigSize = impositionType === 'perfect-bound' ? store.perfectBound.signatureSize : store.booklet.signatureSize;
+    const effSigSize = sigSize > 0 && sigSize < pageCount ? sigSize : pageCount;
+    const sigSheets = Math.ceil(effSigSize / 4);
+    const sheetsPerSig = sigSheets * 2;
+    const totalSignatures = Math.ceil(pageCount / effSigSize);
+    const signatureIndex = impositionType === 'perfect-bound'
+      ? Math.floor(idx / sheetsPerSig)
+      : undefined;
+    const sigIdxParam = impositionType === 'perfect-bound' ? signatureIndex : undefined;
+    const totalSigsParam = impositionType === 'perfect-bound' ? totalSignatures : undefined;
+
+    const slugMeta = {
+      fileName: store.fileName,
+      grainDirection: store.sheet.grainDirection,
+      pageCount: store.pageCount,
+      pdfxProfile: store.marks.pdfxProfile,
+    };
+
+    const marksOverlay = calculateMarks(sW, sH, marks.bleed, sheet.margins, marks, sheetData.cells, idx, layout.sheets.length, impositionType, sigIdxParam, totalSigsParam, slugMeta);
 
     await previewEngine.renderSheet(
       canvas,
@@ -89,7 +107,7 @@ export function PreviewCanvas() {
 
     if (duplexMode && canvasBackRef.current && idx + 1 < layout.sheets.length) {
       const backSheet = layout.sheets[idx + 1];
-      const backMarks = calculateMarks(sW, sH, marks.bleed, sheet.margins, marks, backSheet.cells, idx + 1, layout.sheets.length, impositionType);
+      const backMarks = calculateMarks(sW, sH, marks.bleed, sheet.margins, marks, backSheet.cells, idx + 1, layout.sheets.length, impositionType, sigIdxParam, totalSigsParam, slugMeta);
       await previewEngine.renderSheet(
         canvasBackRef.current,
         backSheet,

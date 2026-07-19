@@ -34,6 +34,9 @@ export function calculateMarks(
   sheetIndex?: number,
   totalSheets?: number,
   impositionType?: ImpositionType,
+  signatureIndex?: number,
+  totalSignatures?: number,
+  slugMeta?: { fileName?: string; grainDirection?: string; pageCount?: number; pdfxProfile?: string },
 ): MarksOverlay {
   const markLength = config.cropMarkLength;
   const markOffset = config.cropMarkOffset;
@@ -47,11 +50,16 @@ export function calculateMarks(
     colorBarPatches: [],
     foldLines: [],
     bindingMarks: [],
+    collatingMarks: [],
     signatureLabels: [],
   };
 
   if (config.cropMarks) {
-    if (isBooklet) {
+    if (config.collatingMarks && impositionType === 'perfect-bound' && signatureIndex !== undefined && totalSignatures !== undefined && totalSignatures > 1) {
+    drawCollatingMarks(overlay, cells, signatureIndex, totalSignatures, margins, sheetH);
+  }
+
+  if (isBooklet) {
       drawBookletCropMarks(overlay, cells, markOffset, markLength);
     } else {
       drawStandardCropMarks(overlay, cells, markOffset, markLength);
@@ -118,11 +126,23 @@ export function calculateMarks(
   }
 
   if (config.signatureNumbering && sheetIndex !== undefined && totalSheets !== undefined) {
-    overlay.signatureLabels.push({
-      x: sheetW / 2,
-      y: margins - 8,
-      text: `Pliego ${sheetIndex + 1} / ${totalSheets}`,
-    });
+    const today = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const fileName = slugMeta?.fileName || '';
+    const grainDir = slugMeta?.grainDirection === 'long' ? 'FL' : slugMeta?.grainDirection === 'short' ? 'FC' : '';
+    const pagesLabel = slugMeta?.pageCount ? `${slugMeta.pageCount} págs` : '';
+
+    const line1 = `${fileName ? fileName + ' — ' : ''}${today} — Pliego ${sheetIndex + 1}/${totalSheets}`;
+    const line2 = [
+      impositionType ? impositionType : '',
+      pagesLabel,
+      grainDir ? `Fibra: ${grainDir}` : '',
+    ].filter(Boolean).join(' — ');
+    const line3 = config.pdfxOutput && slugMeta?.pdfxProfile ? `PDF/X-4 — ${slugMeta.pdfxProfile}` : '';
+
+    const labelY = margins - 8;
+    overlay.signatureLabels.push({ x: sheetW / 2, y: labelY, text: line1 });
+    if (line2) overlay.signatureLabels.push({ x: sheetW / 2, y: labelY - 10, text: line2 });
+    if (line3) overlay.signatureLabels.push({ x: sheetW / 2, y: labelY - 20, text: line3 });
   }
 
   return overlay;
@@ -226,6 +246,32 @@ function drawBookletCropMarks(
     y1: bottomY + markOffset,
     x2: rightEdge,
     y2: bottomY + markOffset,
+  });
+}
+
+function drawCollatingMarks(
+  overlay: MarksOverlay,
+  cells: NUpCell[],
+  signatureIndex: number,
+  totalSignatures: number,
+  margins: number,
+  sheetH: number,
+) {
+  const validCells = cells.filter(c => c.pageIndex >= 0);
+  if (validCells.length < 2) return;
+
+  const spineX = (validCells[0].x + validCells[0].width + validCells[1].x) / 2;
+  const markW = 3;
+  const markH = 3;
+  const usableH = sheetH - 2 * margins;
+  const stepY = usableH / (totalSignatures + 1);
+  const markY = margins + stepY * (signatureIndex + 1);
+
+  overlay.collatingMarks.push({
+    x: spineX - 2,
+    y: markY,
+    w: markW,
+    h: markH,
   });
 }
 

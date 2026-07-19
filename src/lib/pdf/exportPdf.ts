@@ -11,6 +11,9 @@ export async function exportPdf(
   margins: number,
   fileName?: string,
   impositionType?: ImpositionType,
+  sigSize?: number,
+  pageCount?: number,
+  grainDirection?: string,
 ): Promise<Uint8Array> {
   const srcDoc = await PDFDocument.load(originalPdfBytes, { ignoreEncryption: false });
   const outDoc = await PDFDocument.create();
@@ -20,6 +23,11 @@ export async function exportPdf(
     outDoc.setCreator('MAQUETADOR');
     outDoc.setProducer('MAQUETADOR - PDF/X-4');
   }
+
+  const effSigSize = (sigSize ?? 0) > 0 && pageCount && sigSize! < pageCount ? sigSize! : (pageCount ?? 1);
+  const sigSheets = Math.ceil(effSigSize / 4);
+  const sheetsPerSig = sigSheets * 2;
+  const totalSignatures = pageCount ? Math.ceil(pageCount / effSigSize) : 1;
 
   for (let i = 0; i < layout.sheets.length; i++) {
     const sheet = layout.sheets[i];
@@ -63,7 +71,17 @@ export async function exportPdf(
       });
     }
 
-    drawProductionMarks(page, sheet, sheetW, sheetHPoints, marksConfig, margins, i, layout.sheets.length, impositionType);
+    const sigIdx = impositionType === 'perfect-bound'
+      ? Math.floor(i / sheetsPerSig)
+      : undefined;
+    const totalSigs = impositionType === 'perfect-bound' ? totalSignatures : undefined;
+
+    drawProductionMarks(page, sheet, sheetW, sheetHPoints, marksConfig, margins, i, layout.sheets.length, impositionType, sigIdx, totalSigs, {
+      fileName: fileName || '',
+      grainDirection: grainDirection || '',
+      pageCount: pageCount || 0,
+      pdfxProfile: marksConfig.pdfxProfile,
+    });
   }
 
   return outDoc.save();
@@ -79,8 +97,11 @@ function drawProductionMarks(
   sheetIndex?: number,
   totalSheets?: number,
   impositionType?: ImpositionType,
+  signatureIndex?: number,
+  totalSignatures?: number,
+  slugMeta?: { fileName?: string; grainDirection?: string; pageCount?: number; pdfxProfile?: string },
 ) {
-  const overlay = calculateMarks(sheetW, sheetH, marksConfig.bleed, margins, marksConfig, sheet.cells, sheetIndex, totalSheets, impositionType);
+  const overlay = calculateMarks(sheetW, sheetH, marksConfig.bleed, margins, marksConfig, sheet.cells, sheetIndex, totalSheets, impositionType, signatureIndex, totalSignatures, slugMeta);
   const regBlack = cmyk(1, 1, 1, 1);
 
   for (const line of overlay.cropLines) {
@@ -96,19 +117,26 @@ function drawProductionMarks(
     const cx = reg.cx;
     const cy = sheetH - reg.cy;
     const size = 8;
+    page.drawCircle({
+      x: cx,
+      y: cy,
+      size: size,
+      borderColor: regBlack,
+      borderWidth: 0.25,
+    });
     page.drawLine({ start: { x: cx - size, y: cy }, end: { x: cx + size, y: cy }, thickness: 0.25, color: regBlack });
     page.drawLine({ start: { x: cx, y: cy - size }, end: { x: cx, y: cy + size }, thickness: 0.25, color: regBlack });
   }
 
   for (const bb of overlay.bleedBoxes) {
-    page.drawRectangle({
-      x: bb.x,
-      y: sheetH - bb.y - bb.h,
-      width: bb.w,
-      height: bb.h,
-      borderColor: rgb(1, 0, 0),
-      borderWidth: 0.25,
-    });
+    const x1 = bb.x;
+    const y1 = sheetH - bb.y;
+    const x2 = bb.x + bb.w;
+    const y2 = sheetH - bb.y - bb.h;
+    page.drawLine({ start: { x: x1, y: y1 }, end: { x: x2, y: y1 }, thickness: 0.25, color: rgb(1, 0, 0), dashArray: [4, 4] });
+    page.drawLine({ start: { x: x2, y: y1 }, end: { x: x2, y: y2 }, thickness: 0.25, color: rgb(1, 0, 0), dashArray: [4, 4] });
+    page.drawLine({ start: { x: x2, y: y2 }, end: { x: x1, y: y2 }, thickness: 0.25, color: rgb(1, 0, 0), dashArray: [4, 4] });
+    page.drawLine({ start: { x: x1, y: y2 }, end: { x: x1, y: y1 }, thickness: 0.25, color: rgb(1, 0, 0), dashArray: [4, 4] });
   }
 
   for (const patch of overlay.colorBarPatches) {
@@ -142,6 +170,16 @@ function drawProductionMarks(
       size: bm.radius,
       borderColor: regBlack,
       borderWidth: 0.25,
+    });
+  }
+
+  for (const cm of overlay.collatingMarks) {
+    page.drawRectangle({
+      x: cm.x,
+      y: sheetH - cm.y - cm.h,
+      width: cm.w,
+      height: cm.h,
+      color: regBlack,
     });
   }
 

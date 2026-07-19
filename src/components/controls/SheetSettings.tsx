@@ -3,7 +3,7 @@ import { Select } from '@/components/ui/Select';
 import { NumberInput } from '@/components/ui/NumberInput';
 import { Toggle } from '@/components/ui/Toggle';
 import { SHEET_PRESETS } from '@/types/imposition';
-import type { SheetPreset, Unit, Orientation, BleedMode } from '@/types/imposition';
+import type { SheetPreset, Unit, Orientation, BleedMode, GrainDirection } from '@/types/imposition';
 import { pointsToUnit, unitToPoints } from '@/types/imposition';
 
 const PRESET_OPTIONS: { value: SheetPreset; label: string }[] = [
@@ -53,6 +53,16 @@ export function SheetSettings() {
         options={[
           { value: 'portrait', label: 'Vertical' },
           { value: 'landscape', label: 'Horizontal' },
+        ]}
+      />
+
+      <Select
+        label="Dirección de fibra"
+        value={sheet.grainDirection}
+        onChange={(v) => setSheetConfig({ grainDirection: v as GrainDirection })}
+        options={[
+          { value: 'long', label: 'Fibra larga (paralela al lomo)' },
+          { value: 'short', label: 'Fibra corta (perpendicular al lomo)' },
         ]}
       />
 

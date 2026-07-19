@@ -15,5 +15,8 @@
 # features
 - Priorizar funcionalidades de imposición tipo Booklet para que sea lo más completo posible. Confidence: 0.70
 
+# architecture
+- Usar CIP4 JDF 1.8 como modelo conceptual para la estructura de imposición (signaturas, sheets, components, marks, gatherings). Confidence: 0.55
+
 # marks
 - Las guías/marcas de corte deben tener una opción para personalizar el grosor de línea. Confidence: 0.60

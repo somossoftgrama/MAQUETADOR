@@ -61,6 +61,9 @@ export function Toolbar() {
         sheet.margins,
         fileName,
         impositionType,
+        impositionType === 'perfect-bound' ? store.perfectBound.signatureSize : store.booklet.signatureSize,
+        pageCount,
+        sheet.grainDirection,
       );
 
       const blob = new Blob([pdfBytes as BlobPart], { type: 'application/pdf' });

@@ -5,6 +5,7 @@ import { Select } from '@/components/ui/Select';
 
 export function MarksControls() {
   const marks = useDocumentStore((s) => s.marks);
+  const impositionType = useDocumentStore((s) => s.impositionType);
   const setMarksConfig = useDocumentStore((s) => s.setMarksConfig);
 
   return (
@@ -98,14 +99,29 @@ export function MarksControls() {
         ]}
       />
 
+      {impositionType === 'perfect-bound' && (
+        <>
+          <Toggle
+            label="Marcas de colación"
+            checked={marks.collatingMarks}
+            onChange={(v) => setMarksConfig({ collatingMarks: v })}
+          />
+          {marks.collatingMarks && (
+            <p className="text-xs text-gray-400">
+              Cuadraditos negros en el lomo que forman una escalera diagonal al apilar los cuadernillos. Permite verificar el orden en encuadernación.
+            </p>
+          )}
+        </>
+      )}
+
       <Toggle
-        label="Numeración de pliegos"
+        label="Slug de trabajo"
         checked={marks.signatureNumbering}
         onChange={(v) => setMarksConfig({ signatureNumbering: v })}
       />
       {marks.signatureNumbering && (
         <p className="text-xs text-gray-400">
-          Imprime el número de pliego en cada plancha como referencia de encuadernación.
+          Imprime nombre de archivo, fecha, tipo de imposición, cantidad de páginas y dirección de fibra en cada plancha.
         </p>
       )}
 
