@@ -16,21 +16,23 @@ export function calculateCardsLayout(
   const offsetX = centerContent ? gm.left + (sheetW - gm.left - gm.right - gridW) / 2 : gm.left;
   const offsetY = centerContent ? gm.top + (sheetH - gm.top - gm.bottom - gridH) / 2 : gm.top;
 
-  const sheets: ImpositionSheet[] = [];
-  let pageIdx = sourcePage;
-  let sheetIdx = 0;
+  const safeSource = Math.min(sourcePage, pageCount - 1);
 
-  while (pageIdx < pageCount) {
-    const cells: NUpCell[] = [];
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        cells.push({ pageIndex: pageIdx, x: offsetX + c * (cardWidth + gutter), y: offsetY + r * (cardHeight + gutter), width: cardWidth, height: cardHeight, rotation: 0 });
-      }
+  const cells: NUpCell[] = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      cells.push({
+        pageIndex: safeSource,
+        x: offsetX + c * (cardWidth + gutter),
+        y: offsetY + r * (cardHeight + gutter),
+        width: cardWidth,
+        height: cardHeight,
+        rotation: 0,
+      });
     }
-    sheets.push({ cells, sheetIndex: sheetIdx });
-    sheetIdx++;
-    pageIdx++;
   }
 
-  return { sheets, totalSheets: sheets.length, sheetWidth: sheetW, sheetHeight: sheetH };
+  const sheets: ImpositionSheet[] = [{ cells, sheetIndex: 0 }];
+
+  return { sheets, totalSheets: 1, sheetWidth: sheetW, sheetHeight: sheetH };
 }

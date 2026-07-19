@@ -17,10 +17,10 @@ export function calculatePerfectBoundLayout(
   const cellW = pageWidth;
   const cellH = pageHeight;
 
-  const gridW = cellW * 2;
-  const offsetX = centerContent
-    ? gm.left + (sheetW - gm.left - gm.right - gridW) / 2
-    : gm.left;
+  const spineCenter = centerContent
+    ? gm.left + (sheetW - gm.left - gm.right) / 2
+    : gm.left + cellW;
+
   const offsetY = centerContent
     ? gm.top + (sheetH - gm.top - gm.bottom - cellH) / 2
     : gm.top;
@@ -48,7 +48,7 @@ export function calculatePerfectBoundLayout(
       const frontCells: NUpCell[] = [
         {
           pageIndex: pageLeftFront,
-          x: offsetX,
+          x: spineCenter - cellW,
           y: offsetY,
           width: cellW,
           height: cellH,
@@ -56,7 +56,7 @@ export function calculatePerfectBoundLayout(
         },
         {
           pageIndex: pageRightFront,
-          x: offsetX + cellW,
+          x: spineCenter,
           y: offsetY,
           width: cellW,
           height: cellH,
@@ -67,7 +67,7 @@ export function calculatePerfectBoundLayout(
       const backCells: NUpCell[] = [
         {
           pageIndex: pageLeftBack,
-          x: offsetX,
+          x: spineCenter - cellW,
           y: offsetY,
           width: cellW,
           height: cellH,
@@ -75,7 +75,7 @@ export function calculatePerfectBoundLayout(
         },
         {
           pageIndex: pageRight,
-          x: offsetX + cellW,
+          x: spineCenter,
           y: offsetY,
           width: cellW,
           height: cellH,

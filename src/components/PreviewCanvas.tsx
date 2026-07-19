@@ -99,10 +99,6 @@ export function PreviewCanvas() {
         previewScale,
       );
     }
-
-    if (idx !== currentSheetIndex && idx < layout.sheets.length) {
-      setCurrentSheetIndex(idx);
-    }
   }, [
     originalPdfBytes,
     pageCount,
@@ -117,7 +113,6 @@ export function PreviewCanvas() {
     marks,
     previewScale,
     currentSheetIndex,
-    setCurrentSheetIndex,
     duplexMode,
   ]);
 

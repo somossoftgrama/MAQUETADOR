@@ -149,8 +149,8 @@ class PreviewEngine {
 
     for (const fold of marks.foldLines) {
       ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 0.5;
-      ctx.setLineDash([4, 4]);
+      ctx.lineWidth = Math.max(0.5, 1.5 * scale);
+      ctx.setLineDash([4 * scale, 4 * scale]);
       ctx.beginPath();
       ctx.moveTo(fold.x1 * scale, fold.y1 * scale);
       ctx.lineTo(fold.x2 * scale, fold.y2 * scale);
@@ -171,8 +171,11 @@ class PreviewEngine {
 
     for (const label of marks.signatureLabels) {
       ctx.fillStyle = '#000';
-      ctx.font = `${7 * scale}px Inter, sans-serif`;
-      ctx.fillText(label.text, label.x * scale - 25 * scale, label.y * scale + 7 * scale);
+      ctx.font = `bold ${Math.max(12, 14 * scale)}px Inter, sans-serif`;
+      const textWidth = ctx.measureText(label.text).width;
+      const tx = (label.x * scale) - textWidth / 2;
+      const ty = Math.max(20, label.y * scale);
+      ctx.fillText(label.text, tx, ty);
     }
 
     ctx.restore();
